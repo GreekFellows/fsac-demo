@@ -1,5 +1,7 @@
 # fsac-demo
 
+![](11o.png)
+
 is a demo for fsac, a game.
 
 the game will, hopefully, be good.

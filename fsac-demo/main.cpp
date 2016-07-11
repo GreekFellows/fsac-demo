@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <chrono>
 
 #include "GL/glew.h"
 #include "imgui.h"
@@ -38,7 +39,14 @@ std::vector<fsArea*> areas;
 std::vector<fsBlock*> blocks;
 std::vector<fsPopulation*> populations;
 
+bool keepSimulating = false;
+double simulationIntervalMilliseconds = 10.0;
+std::chrono::high_resolution_clock simulationClock;
+std::chrono::high_resolution_clock::time_point lastSimulation;
+
 void initFSAC() {
+	lastSimulation = simulationClock.now();
+
 	for (int ca = 0; ca != numAreas; ++ca) {
 		fsArea *newArea = new fsArea(areaCount++);
 		newArea->setSize(3, 3);
@@ -109,8 +117,19 @@ void initFSAC() {
 }
 
 void tickFSAC() {
-	for (auto iter = areas.begin(); iter != areas.end(); ++iter) {
-		(*iter)->simulate();
+	std::chrono::high_resolution_clock::time_point timeNow = simulationClock.now();
+
+	if (keepSimulating) {
+		long elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(timeNow - lastSimulation).count();
+		if (elapsedTime >= simulationIntervalMilliseconds) {
+			lastSimulation = timeNow;
+			for (auto iter = areas.begin(); iter != areas.end(); ++iter) {
+				(*iter)->simulate();
+			}
+		}
+	}
+	else {
+		lastSimulation = timeNow;
 	}
 }
 
@@ -120,84 +139,98 @@ void renderScene() {
 
 void showImGui() {
 	ImGui::Begin("main controls");
-	ImGui::Text("observations");
 
-	for (auto aiter = areas.begin(); aiter != areas.end(); ++aiter) {
-		fsArea *currentArea = *aiter;
+	if (ImGui::TreeNode("observations")) {
+		for (auto aiter = areas.begin(); aiter != areas.end(); ++aiter) {
+			fsArea *currentArea = *aiter;
 
-		if (ImGui::Button(("show area " + std::to_string(currentArea->index)).c_str())) {
-			currentArea->showObservationWindow = true;
-		}
-
-		if (currentArea->showObservationWindow) {
-			ImGui::Begin(("area " + std::to_string(currentArea->index)).c_str(), &currentArea->showObservationWindow);
-			ImGui::Text("show block...");
-
-			int newLineCount = 0;
-			for (auto biter = currentArea->blocks.begin(); biter != currentArea->blocks.end(); ++biter, ++newLineCount) {
-				fsBlock *currentBlock = *biter;
-
-				if (ImGui::Button((std::to_string(currentBlock->index)).c_str(), ImVec2(20, 20))) {
-					currentBlock->showObservationWindow = true;
-				}
-
-				if (currentBlock->showObservationWindow) {
-					ImGui::Begin(("block " + std::to_string(currentBlock->index)).c_str(), &currentBlock->showObservationWindow);
-					for (auto piter = currentBlock->populations.begin(); piter != currentBlock->populations.end(); ++piter) {
-						fsPopulation *currentPopulation = *piter;
-
-						if (ImGui::Button(("show population " + std::to_string(currentPopulation->index)).c_str())) {
-							currentPopulation->showObservationWindow = true;
-						}
-
-						if (currentPopulation->showObservationWindow) {
-							ImGui::Begin(("population " + std::to_string(currentPopulation->index)).c_str(), &currentPopulation->showObservationWindow);
-
-							if (ImGui::TreeNode("size")) {
-								ImGui::Text((std::to_string(currentPopulation->size)).c_str());
-								ImGui::TreePop();
-							}
-
-							if (ImGui::TreeNode("genome")) {
-								for (auto giter = currentPopulation->genome.begin(); giter != currentPopulation->genome.end(); ++giter) {
-									fsGene *currentGene = *giter;
-									fsGeneInfo currentGeneInfo = fsGene::findGeneInfo(currentGene->id);
-
-									ImGui::Text(currentGeneInfo.name.c_str());
-									ImGui::SameLine();
-									showGeneInfoButton(currentGeneInfo, "?");
-
-									if (!currentGene->alleles.empty()) {
-										for (auto aliter = currentGene->alleles.begin(); aliter != currentGene->alleles.end(); ++aliter) {
-											fsAllele *currentAllele = *aliter;
-											fsAlleleInfo currentAlleleInfo = fsAllele::findAlleleInfo(currentAllele->id);
-
-											showAlleleInfoButton(currentAlleleInfo);
-											ImGui::SameLine();
-										}
-									}
-									else {
-										ImGui::Text("(none)");
-									}
-									ImGui::Dummy(ImVec2(0, 0));
-								}
-								ImGui::TreePop();
-							}
-
-							ImGui::End();
-						}
-					}
-
-					ImGui::End();
-				}
-
-				if (newLineCount % currentArea->width != (currentArea->width - 1)) {
-					ImGui::SameLine();
-				}
+			if (ImGui::Button(("show area " + std::to_string(currentArea->index)).c_str())) {
+				currentArea->showObservationWindow = true;
 			}
 
-			ImGui::End();
+			if (currentArea->showObservationWindow) {
+				ImGui::Begin(("area " + std::to_string(currentArea->index)).c_str(), &currentArea->showObservationWindow);
+				ImGui::Text("show block...");
+
+				int newLineCount = 0;
+				for (auto biter = currentArea->blocks.begin(); biter != currentArea->blocks.end(); ++biter, ++newLineCount) {
+					fsBlock *currentBlock = *biter;
+
+					if (ImGui::Button((std::to_string(currentBlock->index)).c_str(), ImVec2(20, 20))) {
+						currentBlock->showObservationWindow = true;
+					}
+
+					if (currentBlock->showObservationWindow) {
+						ImGui::Begin(("block " + std::to_string(currentBlock->index)).c_str(), &currentBlock->showObservationWindow);
+						for (auto piter = currentBlock->populations.begin(); piter != currentBlock->populations.end(); ++piter) {
+							fsPopulation *currentPopulation = *piter;
+
+							if (ImGui::Button(("show population " + std::to_string(currentPopulation->index)).c_str())) {
+								currentPopulation->showObservationWindow = true;
+							}
+
+							if (currentPopulation->showObservationWindow) {
+								ImGui::Begin(("population " + std::to_string(currentPopulation->index)).c_str(), &currentPopulation->showObservationWindow);
+
+								if (ImGui::TreeNode("size")) {
+									ImGui::Text((std::to_string(currentPopulation->size)).c_str());
+									ImGui::TreePop();
+								}
+
+								if (ImGui::TreeNode("genome")) {
+									for (auto giter = currentPopulation->genome.begin(); giter != currentPopulation->genome.end(); ++giter) {
+										fsGene *currentGene = *giter;
+										fsGeneInfo currentGeneInfo = fsGene::findGeneInfo(currentGene->id);
+
+										ImGui::Text(currentGeneInfo.name.c_str());
+										ImGui::SameLine();
+										showGeneInfoButton(currentGeneInfo, "?");
+
+										if (!currentGene->alleles.empty()) {
+											for (auto aliter = currentGene->alleles.begin(); aliter != currentGene->alleles.end(); ++aliter) {
+												fsAllele *currentAllele = *aliter;
+												fsAlleleInfo currentAlleleInfo = fsAllele::findAlleleInfo(currentAllele->id);
+
+												showAlleleInfoButton(currentAlleleInfo);
+												ImGui::SameLine();
+											}
+										}
+										else {
+											ImGui::Text("(none)");
+										}
+										ImGui::Dummy(ImVec2(0, 0));
+									}
+									ImGui::TreePop();
+								}
+
+								ImGui::End();
+							}
+						}
+
+						ImGui::End();
+					}
+
+					if (newLineCount % currentArea->width != (currentArea->width - 1)) {
+						ImGui::SameLine();
+					}
+				}
+
+				ImGui::End();
+			}
 		}
+		ImGui::TreePop();
+	}
+
+	if (ImGui::TreeNode("simulation controls")) {
+		if (ImGui::Button(keepSimulating ? "pause " : "resume " "simulation")) {
+			keepSimulating = !keepSimulating;
+		}
+
+		float simulationIntervalMillisecondsFloat = simulationIntervalMilliseconds;
+		ImGui::SliderFloat("simulation interval (ms)", &simulationIntervalMillisecondsFloat, 10, 30000);
+		simulationIntervalMilliseconds = simulationIntervalMillisecondsFloat;
+
+		ImGui::TreePop();
 	}
 
 	ImGui::End();
@@ -214,13 +247,15 @@ void showGeneInfoButton(const fsGeneInfo &gi, const std::string &label) {
 		ImGui::BeginTooltip();
 		ImGui::Text((gi.name + " gene").c_str());
 		ImGui::Separator();
-		ImGui::Text(gi.desc.c_str());
+		ImGui::TextWrapped(gi.desc.c_str());
 		ImGui::Separator();
 
 		ImGui::Text("alleles: ");
 		for (auto iter = gi.alleleIDs.begin(); iter != gi.alleleIDs.end(); ++iter) {
 			showAlleleInfoButton(fsAllele::findAlleleInfo(*iter));
+			ImGui::SameLine();
 		}
+		ImGui::Dummy(ImVec2(0, 0));
 
 		ImGui::EndTooltip();
 	}
@@ -238,7 +273,7 @@ void showAlleleInfoButton(const fsAlleleInfo &ai, const std::string &label) {
 		ImGui::BeginTooltip();
 		ImGui::Text((ai.name + " allele").c_str());
 		ImGui::Separator();
-		ImGui::Text(ai.desc.c_str());
+		ImGui::TextWrapped(ai.desc.c_str());
 		ImGui::Separator();
 
 		ImGui::Text("gene: ");
