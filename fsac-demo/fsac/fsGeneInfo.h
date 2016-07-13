@@ -19,6 +19,8 @@ public:
 	fsGeneInfo();
 	fsGeneInfo(const fsGeneID&, const std::string&, const std::string&, const std::initializer_list<fsAlleleID>&);
 
+	std::string makeWindowTitle() const;
+
 };
 
 const fsGeneInfo testGI = fsGeneInfo(

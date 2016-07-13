@@ -46,4 +46,6 @@ public:
 
 	void simulate();
 
+	std::string makeWindowTitle() const;
+
 };

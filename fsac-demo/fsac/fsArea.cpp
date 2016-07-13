@@ -46,3 +46,7 @@ void fsArea::simulate() {
 		(*iter)->simulate();
 	}
 }
+
+std::string fsArea::makeWindowTitle() const {
+	return ("area " + std::to_string(index));
+}

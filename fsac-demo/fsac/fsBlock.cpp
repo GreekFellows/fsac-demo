@@ -76,3 +76,7 @@ void fsBlock::simulate() {
 		return (ceffect.affectCount++);
 	}), effects.end());
 }
+
+std::string fsBlock::makeWindowTitle() const {
+	return ("block " + std::to_string(index));
+}

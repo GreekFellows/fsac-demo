@@ -16,6 +16,8 @@ public:
 	fsAlleleInfo();
 	fsAlleleInfo(const fsAlleleID&, const std::string&, const std::string&, const fsGeneID&);
 
+	std::string makeWindowTitle() const;
+
 };
 
 const fsAlleleInfo testAI = fsAlleleInfo(

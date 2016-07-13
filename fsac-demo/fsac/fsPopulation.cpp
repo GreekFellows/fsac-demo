@@ -195,3 +195,7 @@ bool fsPopulation::hasAlleleWithId(const fsAlleleID &cid) {
 
 	return result;
 }
+
+std::string fsPopulation::makeWindowTitle() const {
+	return ("population " + std::to_string(index));
+}
